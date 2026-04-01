@@ -1,0 +1,40 @@
+name: 2libra Auto Sign
+
+on:
+  schedule:
+    - cron: '7 4 * * *'
+  workflow_dispatch:
+    inputs:
+      account:
+        description: '按 label 或 username 过滤单个账号，留空则执行全部账号'
+        required: false
+        default: ''
+        type: string
+      dry_run:
+        description: '只检查是否已签到，不实际执行签到'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  auto-sign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run auto sign
+        env:
+          LIBRA_ACCOUNTS_JSON: ${{ secrets.LIBRA_ACCOUNTS_JSON }}
+          ACCOUNT_FILTER: ${{ inputs.account || '' }}
+          DRY_RUN: ${{ inputs.dry_run || false }}
+        run: node run.mjs

@@ -1,0 +1,14 @@
+[
+  {
+    "label": "main",
+    "username": "user1@example.com",
+    "password": "your-password-1",
+    "enabled": true
+  },
+  {
+    "label": "backup",
+    "username": "user2@example.com",
+    "password": "your-password-2",
+    "enabled": true
+  }
+]
