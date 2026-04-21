@@ -2,7 +2,7 @@ name: 2libra Auto Sign
 
 on:
   schedule:
-    - cron: '0 4 * * *'
+    - cron: '0 17 * * *'
   workflow_dispatch:
     inputs:
       account:
@@ -15,6 +15,11 @@ on:
         required: false
         default: false
         type: boolean
+      badge_restore_wait_minutes:
+        description: '签到后等待多少分钟再佩戴徽章（默认 11）'
+        required: false
+        default: '11'
+        type: string
 
 permissions:
   contents: read
@@ -22,7 +27,7 @@ permissions:
 jobs:
   auto-sign:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -37,4 +42,5 @@ jobs:
           LIBRA_ACCOUNTS_JSON: ${{ secrets.LIBRA_ACCOUNTS_JSON }}
           ACCOUNT_FILTER: ${{ inputs.account || '' }}
           DRY_RUN: ${{ inputs.dry_run || false }}
+          BADGE_RESTORE_WAIT_MINUTES: ${{ inputs.badge_restore_wait_minutes || '11' }}
         run: node run.mjs
