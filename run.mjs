@@ -215,7 +215,8 @@ async function runAccount(account) {
       };
     }
 
-    const checkResult = await checkToday(loginResult.accessToken);
+    const accessToken = loginResult.accessToken;
+    const checkResult = await checkToday(accessToken);
     if (!checkResult.ok) {
       return {
         label: account.label,
@@ -255,7 +256,7 @@ async function runAccount(account) {
       };
     }
 
-    const signResult = await signToday(loginResult.accessToken);
+    const signResult = await signToday(accessToken);
     if (!signResult.ok) {
       return {
         label: account.label,

@@ -1,70 +1,62 @@
 # 2libra 自动签到
 
-这是一个可独立推送到 GitHub 的自动签到项目。
+每天自动为 2libra 账号签到，基于 GitHub Actions 定时运行。
 
-## 文件说明
+## 快速开始
 
-- `run.mjs`：自动签到主脚本
-- `accounts.example.json`：多账号配置示例
-- `.github/workflows/2libra-sign.yml`：GitHub Actions 工作流
+### 1. Fork 本仓库
 
-## GitHub Secrets
+将此仓库 Fork 到你的 GitHub 账号。
 
-请在目标 GitHub 仓库 Secrets 中新增：
+### 2. 配置账号密码
 
-- `LIBRA_ACCOUNTS_JSON`
+进入你 Fork 后的仓库 → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
 
-格式示例：
+添加以下 Secret：
+
+| Secret 名称 | 值 |
+|---|---|
+| `LIBRA_ACCOUNTS_JSON` | 你的账号配置（JSON 格式） |
+
+值的内容示例：
 
 ```json
 [
   {
-    "label": "main",
-    "username": "user1@example.com",
-    "password": "your-password-1",
-    "enabled": true
-  },
-  {
-    "label": "backup",
-    "username": "user2@example.com",
-    "password": "your-password-2",
+    "label": "主账号",
+    "username": "your-email@example.com",
+    "password": "your-password",
     "enabled": true
   }
 ]
 ```
 
+- `label`：账号备注名称（必填）
+- `username`：登录邮箱（必填）
+- `password`：登录密码（必填）
+- `enabled`：是否启用该账号，设为 `false` 可临时禁用
+
+执行逻辑：每次运行都用用户名密码登录获取 token，再进行签到。
+
+支持配置多个账号，每个账号会依次执行签到。
+
+### 3. 等待自动运行
+
+配置完成后，脚本会**每天 UTC 4:00（北京时间 12:00）**自动执行签到。
+
 ## 手动触发
 
-工作流支持两个输入：
+进入仓库 → **Actions** → 选择 **2libra Auto Sign** → **Run workflow**
 
-- `account`：按 `label` 或 `username` 过滤单个账号
-- `dry_run`：只检查是否已签到，不实际执行签到
+可选参数：
 
-## 执行逻辑
+- **account**：指定运行某个账号（填 `label` 或 `username`），留空则运行全部
+- **dry_run**：仅检查是否已签到，不实际执行签到
 
-1. 读取多账号配置
-2. 逐账号重新登录
-3. 查询 `/api/sign/today`
-4. 未签到时调用 `/api/sign`
-5. 输出每个账号结果
+## 常见问题
 
-## 本地测试
+**Q: 如何临时禁用某个账号？**  
+A: 将该账号的 `enabled` 设为 `false`，重新更新 Secret 即可。
 
-可以先用禁用账号做最小验证：
-
-```bash
-LIBRA_ACCOUNTS_JSON='[{"label":"demo","username":"demo@example.com","password":"dummy","enabled":false}]' node run.mjs
-```
-
-## 日志说明
-
-每个账号都会输出以下结果字段：
-
-- `label`
-- `login`
-- `signedToday`
-- `action`
-- `status`
-- `message`
-
-不会输出密码、access token 或完整 cookie。
+**Q: 签到失败怎么办？**  
+A: 在 Actions 页面查看运行日志，检查账号密码是否正确。
