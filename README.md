@@ -35,6 +35,12 @@
     "username": "your-email@example.com",
     "password": "your-password",
     "enabled": true
+  },
+  {
+    "label": "备用账号",
+    "username": "other-email@example.com",
+    "accessToken": "eyJhbGciOi...",
+    "enabled": true
   }
 ]
 ```
@@ -43,8 +49,11 @@
 
 - `label`：账号备注名称（必填）
 - `username`：登录邮箱（必填）
-- `password`：登录密码（必填）
+- `password`：登录密码（与 `accessToken` 至少提供其一）
+- `accessToken`：预先获取的访问令牌（与 `password` 至少提供其一）。若提供，将跳过登录步骤直接使用该 token，适用于站点开启 Cloudflare 挑战导致脚本无法登录的场景
 - `enabled`：是否启用该账号（可选，默认 `true`）
+
+> 如何获取 `accessToken`：浏览器登录 2libra.com 后，打开 DevTools，从请求头 `Authorization: Bearer xxx` 或本地存储中复制 token。token 有有效期，过期后需重新获取。
 
 支持配置多个账号，脚本会按配置逐个处理。
 

@@ -8,7 +8,7 @@
   {
     "label": "backup",
     "username": "user2@example.com",
-    "password": "your-password-2",
+    "accessToken": "eyJhbGciOi...your-access-token",
     "enabled": true
   }
 ]

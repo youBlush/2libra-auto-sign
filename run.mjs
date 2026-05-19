@@ -60,13 +60,14 @@ function normalizeAccount(raw, index) {
   const label = String(raw.label || raw.username || `account-${index + 1}`).trim();
   const username = String(raw.username || '').trim();
   const password = String(raw.password || '').trim();
+  const accessToken = String(raw.accessToken || raw.access_token || '').trim();
   const enabled = raw.enabled !== false;
 
   if (!label) throw new Error(`第 ${index + 1} 个账号缺少 label`);
   if (!username) throw new Error(`账号 ${label} 缺少 username`);
-  if (!password) throw new Error(`账号 ${label} 缺少 password`);
+  if (!accessToken && !password) throw new Error(`账号 ${label} 需要提供 password 或 accessToken`);
 
-  return { label, username, password, enabled };
+  return { label, username, password, accessToken, enabled };
 }
 
 function parseAccounts(jsonText) {
@@ -390,6 +391,13 @@ async function main() {
   // 第一阶段：统一登录，拿到后续操作所需 token。
   for (const context of contexts) {
     if (!context.account.enabled) continue;
+
+    if (context.account.accessToken) {
+      context.accessToken = context.account.accessToken;
+      context.result.login = 'token';
+      log('INFO', `账号 ${context.account.label}（${context.username}）使用预置 accessToken，跳过登录`);
+      continue;
+    }
 
     log('INFO', `开始登录账号 ${context.account.label}（${context.username}）`);
     try {
