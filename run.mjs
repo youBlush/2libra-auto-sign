@@ -229,32 +229,13 @@ async function getUserInfo(accessToken) {
   };
 }
 
-function getEquippedBadges(userInfo) {
-  if (!Array.isArray(userInfo?.equipped_badges)) return [];
+function hasEquippedBadge(userInfo, badgeId) {
+  if (!badgeId || !Array.isArray(userInfo?.equipped_badges)) return false;
 
-  return userInfo.equipped_badges
-    .map((item) => {
-      const id = String(item?.badge_id || item?.badge?.id || '').trim();
-      const name = String(item?.badge?.name || item?.badge?.attributes?.badge_name || '').trim();
-      if (!id) return null;
-      return { id, name: name || id };
-    })
-    .filter(Boolean);
-}
-
-function findEquippedBadge(userInfo, badgeId) {
-  if (!badgeId) return null;
-  return getEquippedBadges(userInfo).find((badge) => badge.id === badgeId) || null;
-}
-
-function buildBadgeSkipMessage(userInfo) {
-  const equippedBadges = getEquippedBadges(userInfo);
-  if (equippedBadges.length === 0) {
-    return '当前未佩戴任何徽章，已跳过徽章处理';
-  }
-
-  const names = equippedBadges.map((badge) => `“${badge.name}”`).join('、');
-  return `当前佩戴${names}，未命中触发徽章，已跳过徽章处理`;
+  return userInfo.equipped_badges.some((item) => {
+    const equippedBadgeId = String(item?.badge_id || item?.badge?.id || '').trim();
+    return equippedBadgeId === badgeId;
+  });
 }
 
 async function equipBadge(accessToken, badgeId, equip) {
@@ -328,7 +309,6 @@ function createContext(account) {
     username,
     accessToken: '',
     active: true,
-    needsSign: false,
     needsReequip: false,
     result: {
       label: account.label,
@@ -409,51 +389,9 @@ async function main() {
     }
   }
 
-  // 第二阶段：先判断是否已签到。已签到直接结束，不再执行徽章与等待逻辑。
-  for (const context of contexts) {
-    if (!context.active) continue;
-
-    try {
-      const checkResult = await checkToday(context.accessToken);
-      if (!checkResult.ok) {
-        markFailure(context, 'check', 'check_failed', checkResult.message);
-        log('ERROR', `${context.account.label} check_failed - ${checkResult.message}`);
-        continue;
-      }
-
-      if (checkResult.signed) {
-        context.result.signedToday = 'yes';
-        context.result.action = 'none';
-        context.result.status = 'already_signed';
-        context.result.message = mergeResultMessage('今天已签到', context.result.message);
-        context.result.success = true;
-        context.active = false;
-        log('OK', `${context.account.label} already_signed - 今天已签到`);
-        continue;
-      }
-
-      context.result.signedToday = 'no';
-      context.needsSign = true;
-
-      if (DRY_RUN) {
-        context.result.action = 'dry_run';
-        context.result.status = 'skipped';
-        context.result.message = mergeResultMessage('dry_run 模式，未实际执行签到', context.result.message);
-        context.result.success = true;
-        context.active = false;
-        log('OK', `${context.account.label} skipped - dry_run 模式，未实际执行签到`);
-        continue;
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      markFailure(context, 'check', 'check_failed', message);
-      log('ERROR', `${context.account.label} check_failed - ${message}`);
-    }
-  }
-
-  // 第三阶段：仅对“未签到”账号尝试摘除触发徽章。
+  // 第二阶段：可选统一摘除指定徽章（失败只记录，不影响后续签到）。
   if (badgeFlowEnabled) {
-    const badgeContexts = contexts.filter((context) => context.active && context.needsSign);
+    const badgeContexts = contexts.filter((context) => context.active);
     for (const context of badgeContexts) {
       try {
         const userInfoResult = await getUserInfo(context.accessToken);
@@ -463,9 +401,8 @@ async function main() {
           continue;
         }
 
-        const triggerBadge = findEquippedBadge(userInfoResult.info, BADGE_FLOW_TRIGGER_BADGE_ID);
-        if (!triggerBadge) {
-          context.result.message = appendMessage(context.result.message, buildBadgeSkipMessage(userInfoResult.info));
+        if (!hasEquippedBadge(userInfoResult.info, BADGE_FLOW_TRIGGER_BADGE_ID)) {
+          context.result.message = appendMessage(context.result.message, `当前佩戴徽章不匹配触发ID（${BADGE_FLOW_TRIGGER_BADGE_ID}），已跳过徽章处理`);
           log('INFO', `${context.account.label} badge_skip - 触发徽章未佩戴`);
           continue;
         }
@@ -487,11 +424,39 @@ async function main() {
     }
   }
 
-  // 第四阶段：仅对“未签到”账号执行签到。
+  // 第三阶段：统一执行签到。
   for (const context of contexts) {
-    if (!context.active || !context.needsSign) continue;
+    if (!context.active) continue;
 
     try {
+      const checkResult = await checkToday(context.accessToken);
+      if (!checkResult.ok) {
+        markFailure(context, 'check', 'check_failed', checkResult.message);
+        log('ERROR', `${context.account.label} check_failed - ${checkResult.message}`);
+        continue;
+      }
+
+      if (checkResult.signed) {
+        context.result.signedToday = 'yes';
+        context.result.action = 'none';
+        context.result.status = 'already_signed';
+        context.result.message = mergeResultMessage('今天已签到', context.result.message);
+        context.result.success = true;
+        log('OK', `${context.account.label} already_signed - 今天已签到`);
+        continue;
+      }
+
+      context.result.signedToday = 'no';
+
+      if (DRY_RUN) {
+        context.result.action = 'dry_run';
+        context.result.status = 'skipped';
+        context.result.message = mergeResultMessage('dry_run 模式，未实际执行签到', context.result.message);
+        context.result.success = true;
+        log('OK', `${context.account.label} skipped - dry_run 模式，未实际执行签到`);
+        continue;
+      }
+
       const signResult = await signToday(context.accessToken);
       if (!signResult.ok) {
         markFailure(context, 'sign', 'sign_failed', signResult.message);
@@ -511,9 +476,9 @@ async function main() {
     }
   }
 
-  // 第五阶段：恢复已摘除的触发徽章（不影响签到结果）。
+  // 第四阶段：统一佩戴指定徽章（失败只记录，不影响签到结果）。
   if (badgeFlowEnabled) {
-    const contextsNeedEquip = contexts.filter((context) => context.needsReequip);
+    const contextsNeedEquip = contexts.filter((context) => context.active && context.needsReequip);
     if (contextsNeedEquip.length > 0) {
       log('INFO', `签到完成，等待 ${BADGE_RESTORE_WAIT_MINUTES} 分钟后再佩戴徽章`);
       await sleep(BADGE_RESTORE_WAIT_MINUTES * 60 * 1000);
