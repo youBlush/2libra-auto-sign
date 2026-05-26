@@ -1,0 +1,39 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    # 每天北京时间 06:00 和 16:00 运行
+    # UTC 时间比北京时间慢 8 小时，所以对应 UTC 的前一天 22:00 和当天 08:00
+    - cron: '0 22,8 * * *'
+  workflow_dispatch: # 允许你在 GitHub 页面上手动点击按钮触发同步
+
+jobs:
+  sync_latest_from_upstream:
+    runs-on: ubuntu-latest
+    name: Sync latest commits from upstream repo
+
+    steps:
+    # Step 1: 检出你自己的仓库
+    - name: Checkout target repo
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    # Step 2: 自动拉取上游并合并
+    - name: Sync upstream changes
+      id: sync
+      uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+      with:
+        target_sync_branch: main
+        # 这里的上游仓库填写你 Fork 的原作者仓库
+        upstream_sync_repo: Aboceder/2libra-auto-sign
+        upstream_sync_branch: main
+        target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+        
+        # 如果遭遇冲突，设为 true 将测试测试，这里设为 false 保证常规同步
+        test_mode: false
+
+    # Step 3: 检查同步状态（可选提示）
+    - name: Check for value epochs
+      if: steps:sync.outputs.has_new_commits == 'true'
+      run: echo "New commits were synced from upstream!"
