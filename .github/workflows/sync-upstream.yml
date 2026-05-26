@@ -33,7 +33,7 @@ jobs:
         # 如果遭遇冲突，设为 true 将测试测试，这里设为 false 保证常规同步
         test_mode: false
 
-    # Step 3: 检查同步状态（可选提示）
+    # Step 3: 检查同步状态（修正了这里的语法错误）
     - name: Check for value epochs
-      if: steps:sync.outputs.has_new_commits == 'true'
+      if: steps.sync.outputs.has_new_commits == 'true'
       run: echo "New commits were synced from upstream!"
