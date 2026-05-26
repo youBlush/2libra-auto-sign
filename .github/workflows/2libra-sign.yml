@@ -2,23 +2,23 @@ name: 2libra Auto Sign
 
 on:
   schedule:
-    - cron: '0 17 * * *'
+    - cron: "0 17 * * *"
   workflow_dispatch:
     inputs:
       account:
-        description: '按 label 或 username 过滤单个账号，留空则执行全部账号'
+        description: "按 label 或 username 过滤单个账号，留空则执行全部账号"
         required: false
-        default: ''
+        default: ""
         type: string
       dry_run:
-        description: '只检查是否已签到，不实际执行签到'
+        description: "只检查是否已签到，不实际执行签到"
         required: false
         default: false
         type: boolean
       badge_restore_wait_minutes:
-        description: '签到后等待多少分钟再佩戴徽章（默认 11）'
+        description: "签到后等待多少分钟再佩戴徽章（默认 11）"
         required: false
-        default: '11'
+        default: "11"
         type: string
 
 permissions:
@@ -35,10 +35,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Run auto sign
         env:
+          LIBRA_API_BASE_URL: "https://2libra.aboceder.workers.dev"
           LIBRA_ACCOUNTS_JSON: ${{ secrets.LIBRA_ACCOUNTS_JSON }}
           ACCOUNT_FILTER: ${{ inputs.account || '' }}
           DRY_RUN: ${{ inputs.dry_run || false }}
